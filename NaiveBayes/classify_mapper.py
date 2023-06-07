@@ -52,10 +52,20 @@ for line in sys.stdin:
     ################# YOUR CODE HERE ################
     # TIP: try using MODEL.get(word, (0,0)) to access the tuple 
     # of log probabilities without throwing a KeyError!
+    TOTAL_KEY = "ClassPriors"
+    
+    prior_ham, prior_spam = MODEL.get(TOTAL_KEY, (0, 0))
+    
+    product_ham = 0 # this is really a sum of logs, but the original was the product, so I'll name this product
+    product_spam = 0
+    for word in words:
+        prob_word_ham, prob_word_spam = MODEL.get(word, (0, 0))
+        product_ham += prob_word_ham
+        product_spam += prob_word_spam
+    logpHam  = prior_ham + product_ham
+    logpSpam = prior_spam + product_spam
 
-
-
-
+    pred_class = 1 if logpSpam > logpHam else 0
 
     ################# (END) YOUR CODE ##############
     
