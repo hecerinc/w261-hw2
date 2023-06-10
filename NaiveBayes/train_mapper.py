@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 """
 Mapper reads in text documents and emits word counts by class.
-INPUT:                                                    
-    DocID \t true_class \t subject \t body                
-OUTPUT:                                                   
-    partitionKey \t word \t class0_partialCount,class1_partialCount       
-    
+INPUT:
+    DocID \t true_class \t subject \t body
+OUTPUT:
+    partitionKey \t word \t ham_partialCount,spam_partialCount
 
 Instructions:
     You know what this script should do, go for it!
@@ -52,15 +51,51 @@ import os
 
 
 
+NUM_REDUCERS = int(os.environ['mapreduce_job_reduces'])
 
+KEYS = list(map(chr, range(ord('A'), ord('Z')+1)))[:NUM_REDUCERS]
 
+def makeKeyHash(key, num_reducers):
+    """
+    Mimic the Hadoop string-hash function.
+    
+    key             the key that will be used for partitioning
+    num_reducers    the number of reducers that will be configured
+    """
+    byteof = lambda char: int(format(ord(char), 'b'), 2)
+    current_hash = 0
+    for c in key:
+        current_hash = (current_hash * 31 + byteof(c))
+    return current_hash % num_reducers
 
+TOTAL_HAM  = 0
+TOTAL_SPAM = 0
+TOTAL_HAM_WORDS  = 0
+TOTAL_SPAM_WORDS = 0
 
+# read from standard input
+for line in sys.stdin:
+    # parse input
+    docID, _class, subject, body = line.split('\t')
+    # tokenize
+    words = re.findall(r'[a-z]+', (subject + ' ' + body).lower())
 
+    for word in words:
+        key = KEYS[makeKeyHash(word, NUM_REDUCERS)]
+        payload = '1,0' if int(_class) == 0 else '0,1'
+        print(f"{key}\t{word}\t{payload}")
+    if int(_class) == 0:
+        TOTAL_HAM_WORDS += len(words)
+        TOTAL_HAM += 1
+    else:
+        TOTAL_SPAM_WORDS += len(words)
+        TOTAL_SPAM += 1
 
-
-
-
+for pkey in KEYS[:NUM_REDUCERS]:
+    print(f"{pkey}\t!total_spam\t{TOTAL_SPAM}")
+    print(f"{pkey}\t!total_ham\t{TOTAL_HAM}")
+    print(f"{pkey}\t!total_spam_words\t{TOTAL_SPAM_WORDS}")
+    print(f"{pkey}\t!total_ham_words\t{TOTAL_HAM_WORDS}")
 
 
 
