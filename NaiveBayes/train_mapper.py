@@ -50,8 +50,7 @@ import os
 #################### YOUR CODE HERE ###################
 
 
-
-NUM_REDUCERS = int(os.environ['mapreduce_job_reduces'])
+NUM_REDUCERS = int(os.environ['mapreduce_job_reduces']) if 'mapreduce_job_reduces' in os.environ else 4
 
 KEYS = list(map(chr, range(ord('A'), ord('Z')+1)))[:NUM_REDUCERS]
 

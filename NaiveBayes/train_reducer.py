@@ -19,6 +19,7 @@ Instructions:
 """
 ##################### YOUR CODE HERE ####################
 import sys
+import os
 
 cur_word = None
 cur_spam_count = 0
@@ -36,6 +37,7 @@ TOTAL_HAM  = 0 # docs
 TOTAL_SPAM = 0 # docs
 TOTAL_HAM_WORDS  = 0
 TOTAL_SPAM_WORDS = 0
+VOCAB_SIZE = 0
 
 for line in sys.stdin:
     try:
@@ -73,25 +75,30 @@ for line in sys.stdin:
                 TOTAL_SPAM = int(payload)
         # emit relative freq
         if cur_word and not cur_word.startswith('!total'):
-            print(f'{cur_word}\t{cur_ham_count}\t{cur_spam_count}\t{cur_ham_count/float(TOTAL_HAM_WORDS) if TOTAL_HAM_WORDS != 0 else 0}\t{cur_spam_count/float(TOTAL_SPAM_WORDS) if TOTAL_SPAM_WORDS != 0 else 0}')
+            VOCAB_SIZE += 1
+            print(f'{part_key}\t{cur_word}\t{cur_ham_count},{cur_spam_count},{TOTAL_HAM_WORDS},{TOTAL_SPAM_WORDS}')
 
         # start a new tally
         cur_ham_count, cur_spam_count = get_counts_from_payload(key, payload)
         cur_word = key
 
-# Calc + emit priors
+# Calc + emit priors 
 TOTAL_DOCS = TOTAL_HAM + TOTAL_SPAM
 spam_prior = TOTAL_SPAM/float(TOTAL_DOCS) if TOTAL_DOCS != 0 else 0
 ham_prior  = TOTAL_HAM/float(TOTAL_DOCS) if TOTAL_DOCS != 0 else 0
-print(f"ClassPriors\t{TOTAL_HAM}\t{TOTAL_SPAM}\t{ham_prior}\t{spam_prior}")
 
 # If there was nothing in the file (rare, but could occur), then let's make sure to not print the !total sums
 if cur_word and not cur_word.startswith('!total'):
     # don't forget the last record!
-    print(f'{cur_word}\t{cur_ham_count}\t{cur_spam_count}\t{cur_ham_count/float(TOTAL_HAM_WORDS) if TOTAL_HAM_WORDS != 0 else 0}\t{cur_spam_count/float(TOTAL_SPAM_WORDS) if TOTAL_SPAM_WORDS != 0 else 0}')
+    VOCAB_SIZE += 1
+    print(f'{part_key}\t{cur_word}\t{cur_ham_count},{cur_spam_count},{TOTAL_HAM_WORDS},{TOTAL_SPAM_WORDS}')
 
-
-
+NUM_REDUCERS = int(os.environ['mapreduce_job_reduces']) if 'mapreduce_job_reduces' in os.environ else 4
+KEYS = list(map(chr, range(ord('A'), ord('Z')+1)))[:NUM_REDUCERS]
+for i in range(NUM_REDUCERS):
+    pkey = KEYS[i]
+    print(f"{pkey}\t!ClassPriors\t{TOTAL_HAM},{TOTAL_SPAM},{ham_prior},{spam_prior}")
+    print(f"{pkey}\t!VOCAB_SIZE\t{VOCAB_SIZE}")
 
 
 
